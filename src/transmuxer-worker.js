@@ -13,7 +13,6 @@
  * message-based interface to a Transmuxer object.
  */
 
-import window as self from 'global/window';
 import fullMux from 'mux.js/lib/mp4';
 import partialMux from 'mux.js/lib/partial';
 import {
@@ -35,7 +34,7 @@ const typeFromStreamString = (streamString) => {
  * @param {Object} transmuxer the transmuxer to wire events on
  * @private
  */
-const wireFullTransmuxerEvents = function(transmuxer) {
+const wireFullTransmuxerEvents = function(self, transmuxer) {
   transmuxer.on('data', function(segment) {
     // transfer ownership of the underlying ArrayBuffer
     // instead of doing a copy to save memory
@@ -239,8 +238,9 @@ const wirePartialTransmuxerEvents = function(transmuxer) {
  * @param {Object} options the options to initialize with
  */
 class MessageHandlers {
-  constructor(options) {
+  constructor(self, options) {
     this.options = options || {};
+    this.self = self;
     this.init();
   }
 
@@ -256,9 +256,9 @@ class MessageHandlers {
       new fullMux.Transmuxer(this.options);
 
     if (this.options.handlePartialData) {
-      wirePartialTransmuxerEvents(this.transmuxer);
+      wirePartialTransmuxerEvents(this.self, this.transmuxer);
     } else {
-      wireFullTransmuxerEvents(this.transmuxer);
+      wireFullTransmuxerEvents(this.self, this.transmuxer);
     }
   }
 
@@ -349,12 +349,12 @@ class MessageHandlers {
 const TransmuxerWorker = function(self) {
   self.onmessage = function(event) {
     if (event.data.action === 'init' && event.data.options) {
-      this.messageHandlers = new MessageHandlers(event.data.options);
+      this.messageHandlers = new MessageHandlers(self, event.data.options);
       return;
     }
 
     if (!this.messageHandlers) {
-      this.messageHandlers = new MessageHandlers();
+      this.messageHandlers = new MessageHandlers(self);
     }
 
     if (event.data && event.data.action && event.data.action !== 'init') {
