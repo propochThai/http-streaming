@@ -378,7 +378,7 @@ class HlsHandler extends Component {
 
     // Handle seeking when looping - middleware doesn't handle this seek event from the tech
     this.on(this.tech_, 'seeking', function() {
-      if (this.tech_.seeking() && this.tech_.currentTime() === 0 && this.tech_.player_.loop()) {
+      if (this.tech_.currentTime() === 0 && this.tech_.player_.loop()) {
         this.setCurrentTime(0);
       }
     });
@@ -656,13 +656,6 @@ class HlsHandler extends Component {
 
     this.tech_.one('canplay',
       this.masterPlaylistController_.setupFirstPlay.bind(this.masterPlaylistController_));
-
-    // Handle seeking when looping - middleware doesn't handle this seek event from the tech
-    this.on(this.tech_, 'seeking', function() {
-      if (this.tech_.currentTime() === 0 && this.tech_.player_.loop()) {
-        this.setCurrentTime(0);
-      }
-    });
 
     this.tech_.on('bandwidthupdate', () => {
       if (this.options_.useBandwidthFromLocalStorage) {
