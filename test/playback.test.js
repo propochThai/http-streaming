@@ -1,6 +1,6 @@
 import QUnit from 'qunit';
 import videojs from 'video.js';
-/* eslint-disable no-unused-vars */
+import document from 'global/document';
 import '../src/videojs-http-streaming';
 
 let when = function(element, type, cb, condition) {
@@ -25,7 +25,7 @@ QUnit.module('Playback', {
   },
   beforeEach(assert) {
     let done = assert.async();
-    let video = document.createElement('video');
+    let video = document.createElement('video-js');
 
     video.width = 600;
     video.height = 300;
@@ -239,8 +239,8 @@ QUnit.test('loops', function(assert) {
     type: 'application/x-mpegURL'
   });
   player.one('playing', function() {
-    player.vhs.mediaSource.one('sourceended', () => {
-      player.vhs.mediaSource.on('sourceopen', () => {
+    player.vhs.mediaSource.addEventListener('sourceended', () => {
+      player.vhs.mediaSource.addEventListener('sourceopen', () => {
         assert.ok(true, 'sourceopen triggered after ending stream');
         done();
       });
