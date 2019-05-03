@@ -357,17 +357,20 @@ const handleSegmentBytes = ({
     // Run through the CaptionParser in case there are captions.
     // Initialize CaptionParser if it hasn't been yet
     if (captionParser && !captionParser.isInitialized()) {
-      captionParser.init();
+      if (!captionParser.isInitialized()) {
+        captionParser.init();
+      }
+
+      const parsed = captionParser.parse(
+        segment.bytes,
+        segment.map.videoTrackIds,
+        segment.map.timescales);
+
+      if (parsed && parsed.captions && parsed.captions.length > 0) {
+        captionsFn(segment, parsed.captions);
+      }
     }
 
-    const parsed = captionParser.parse(
-      segment.bytes,
-      segment.map.videoTrackIds,
-      segment.map.timescales);
-
-    if (parsed && parsed.captions && parsed.captions.length > 0) {
-      captionsFn(segment, parsed.captions);
-    }
 
     doneFn(null, segment, {});
     return;
