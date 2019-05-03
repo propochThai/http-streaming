@@ -13,7 +13,7 @@
  * message-based interface to a Transmuxer object.
  */
 
-import window from 'global/window';
+import window as self from 'global/window';
 import fullMux from 'mux.js/lib/mp4';
 import partialMux from 'mux.js/lib/partial';
 import {
@@ -52,7 +52,7 @@ const wireFullTransmuxerEvents = function(transmuxer) {
     let typedArray = segment.data;
 
     segment.data = typedArray.buffer;
-    window.postMessage({
+    self.postMessage({
       action: 'data',
       segment,
       byteOffset: typedArray.byteOffset,
@@ -61,32 +61,32 @@ const wireFullTransmuxerEvents = function(transmuxer) {
   });
 
   transmuxer.on('id3Frame', function(id3Frame) {
-    window.postMessage({
+    self.postMessage({
       action: 'id3Frame',
       id3Frame
     });
   });
 
   transmuxer.on('caption', function(caption) {
-    window.postMessage({
+    self.postMessage({
       action: 'caption',
       caption
     });
   });
 
   transmuxer.on('done', function(data) {
-    window.postMessage({ action: 'done' });
+    self.postMessage({ action: 'done' });
   });
 
   transmuxer.on('gopInfo', function(gopInfo) {
-    window.postMessage({
+    self.postMessage({
       action: 'gopInfo',
       gopInfo
     });
   });
 
   transmuxer.on('trackinfo', function(trackInfo) {
-    window.postMessage({
+    self.postMessage({
       action: 'trackinfo',
       trackInfo
     });
@@ -94,7 +94,7 @@ const wireFullTransmuxerEvents = function(transmuxer) {
 
   transmuxer.on('audioTimingInfo', function(audioTimingInfo) {
     // convert to video TS since we prioritize video time over audio
-    window.postMessage({
+    self.postMessage({
       action: 'audioTimingInfo',
       audioTimingInfo: {
         start: videoTsToSeconds(audioTimingInfo.start),
@@ -104,7 +104,7 @@ const wireFullTransmuxerEvents = function(transmuxer) {
   });
 
   transmuxer.on('videoTimingInfo', function(videoTimingInfo) {
-    window.postMessage({
+    self.postMessage({
       action: 'videoTimingInfo',
       videoTimingInfo: {
         start: videoTsToSeconds(videoTimingInfo.start),
@@ -142,49 +142,49 @@ const wirePartialTransmuxerEvents = function(transmuxer) {
       segment.videoFrameDtsTime = videoTsToSeconds(event.data.videoFrameDts);
     }
 
-    window.postMessage({
+    self.postMessage({
       action: 'data',
       segment
     }, [ segment.boxes.data, segment.initSegment.data ]);
   });
 
   transmuxer.on('id3Frame', function(id3Frame) {
-    window.postMessage({
+    self.postMessage({
       action: 'id3Frame',
       id3Frame
     });
   });
 
   transmuxer.on('caption', function(caption) {
-    window.postMessage({
+    self.postMessage({
       action: 'caption',
       caption
     });
   });
 
   transmuxer.on('done', function(data) {
-    window.postMessage({
+    self.postMessage({
       action: 'done',
       type: typeFromStreamString(data)
     });
   });
 
   transmuxer.on('partialdone', function(data) {
-    window.postMessage({
+    self.postMessage({
       action: 'partialdone',
       type: typeFromStreamString(data)
     });
   });
 
   transmuxer.on('endedsegment', function(data) {
-    window.postMessage({
+    self.postMessage({
       action: 'endedSegment',
       type: typeFromStreamString(data)
     });
   });
 
   transmuxer.on('trackinfo', function(trackInfo) {
-    window.postMessage({ action: 'trackinfo', trackInfo });
+    self.postMessage({ action: 'trackinfo', trackInfo });
   });
 
   transmuxer.on('audioTimingInfo', function(audioTimingInfo) {
@@ -193,7 +193,7 @@ const wirePartialTransmuxerEvents = function(transmuxer) {
     // unusual case, but if it does occur should not
     // result in valid data being returned
     if (audioTimingInfo.start === null) {
-      window.postMessage({
+      self.postMessage({
         action: 'audioTimingInfo',
         audioTimingInfo
       });
@@ -209,7 +209,7 @@ const wirePartialTransmuxerEvents = function(transmuxer) {
       timingInfoInSeconds.end = videoTsToSeconds(audioTimingInfo.end);
     }
 
-    window.postMessage({
+    self.postMessage({
       action: 'audioTimingInfo',
       audioTimingInfo: timingInfoInSeconds
     });
@@ -224,7 +224,7 @@ const wirePartialTransmuxerEvents = function(transmuxer) {
       timingInfoInSeconds.end = videoTsToSeconds(videoTimingInfo.end);
     }
 
-    window.postMessage({
+    self.postMessage({
       action: 'videoTimingInfo',
       videoTimingInfo: timingInfoInSeconds
     });
@@ -276,6 +276,14 @@ class MessageHandlers {
   }
 
   /**
+   * Recreate the transmuxer so that the next segment added via `push`
+   * start with a fresh transmuxer.
+   */
+  reset() {
+    this.transmuxer.reset();
+  }
+
+  /**
    * Set the value that will be used as the `baseMediaDecodeTime` time for the
    * next segment pushed in. Subsequent segments will have their `baseMediaDecodeTime`
    * set relative to the first based on the PTS values.
@@ -285,8 +293,7 @@ class MessageHandlers {
   setTimestampOffset(data) {
     let timestampOffset = data.timestampOffset || 0;
 
-    this.transmuxer.setBaseMediaDecodeTime(
-      Math.round(secondsToVideoTs(timestampOffset)));
+    this.transmuxer.setBaseMediaDecodeTime(Math.round(secondsToVideoTs(timestampOffset)));
   }
 
   setAudioAppendStart(data) {
@@ -302,7 +309,7 @@ class MessageHandlers {
   flush(data) {
     this.transmuxer.flush();
     // transmuxed done action is fired after both audio/video pipelines are flushed
-    window.postMessage({
+    self.postMessage({
       action: 'done',
       type: 'transmuxed'
     });
@@ -311,7 +318,7 @@ class MessageHandlers {
   partialFlush(data) {
     this.transmuxer.partialFlush();
     // transmuxed partialdone action is fired after both audio/video pipelines are flushed
-    window.postMessage({
+    self.postMessage({
       action: 'partialdone',
       type: 'transmuxed'
     });
@@ -321,14 +328,10 @@ class MessageHandlers {
     this.transmuxer.endTimeline();
     // transmuxed endedtimeline action is fired after both audio/video pipelines end their
     // timelines
-    window.postMessage({
+    self.postMessage({
       action: 'endedtimeline',
       type: 'transmuxed'
     });
-  }
-
-  reset() {
-    this.transmuxer.reset();
   }
 
   alignGopsWith(data) {
@@ -337,7 +340,7 @@ class MessageHandlers {
 }
 
 /**
- * Our web wroker interface so that things can talk to mux.js
+ * Our web worker interface so that things can talk to mux.js
  * that will be running in a web worker. the scope is passed to this by
  * webworkify.
  *
@@ -362,4 +365,4 @@ const TransmuxerWorker = function(self) {
   };
 };
 
-export default new TransmuxerWorker(self); // eslint-disable-line no-undef
+export default new TransmuxerWorker(self);
