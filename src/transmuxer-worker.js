@@ -59,6 +59,24 @@ const wireFullTransmuxerEvents = function(self, transmuxer) {
     }, [segment.data]);
   });
 
+  transmuxer.on('done', function(data) {
+    self.postMessage({ action: 'done' });
+  });
+
+  transmuxer.on('gopInfo', function(gopInfo) {
+    self.postMessage({
+      action: 'gopInfo',
+      gopInfo
+    });
+  });
+
+  transmuxer.on('videoSegmentTimingInfo', function(videoSegmentTimingInfo) {
+    self.postMessage({
+      action: 'videoSegmentTimingInfo',
+      videoSegmentTimingInfo
+    });
+  });
+
   transmuxer.on('id3Frame', function(id3Frame) {
     self.postMessage({
       action: 'id3Frame',
@@ -73,16 +91,6 @@ const wireFullTransmuxerEvents = function(self, transmuxer) {
     });
   });
 
-  transmuxer.on('done', function(data) {
-    self.postMessage({ action: 'done' });
-  });
-
-  transmuxer.on('gopInfo', function(gopInfo) {
-    self.postMessage({
-      action: 'gopInfo',
-      gopInfo
-    });
-  });
 
   transmuxer.on('trackinfo', function(trackInfo) {
     self.postMessage({
