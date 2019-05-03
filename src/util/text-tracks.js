@@ -5,6 +5,68 @@ import window from 'global/window';
 import videojs from 'video.js';
 
 /**
+ * Create captions text tracks on video.js if they do not exist
+ *
+ * @param {Object} inbandTextTracks a reference to current inbandTextTracks
+ * @param {Object} tech the video.js tech
+ * @param {Object} captionStream the caption stream to create
+ * @private
+ */
+export const createCaptionsTrackIfNotExists = function(inbandTextTracks, tech, captionStream) {
+  if (!inbandTextTracks[captionStream]) {
+    tech.trigger({type: 'usage', name: 'hls-608'});
+    let track = tech.textTracks().getTrackById(captionStream);
+
+    if (track) {
+      // Resuse an existing track with a CC# id because this was
+      // very likely created by videojs-contrib-hls from information
+      // in the m3u8 for us to use
+      inbandTextTracks[captionStream] = track;
+    } else {
+      // Otherwise, create a track with the default `CC#` label and
+      // without a language
+      inbandTextTracks[captionStream] = tech.addRemoteTextTrack({
+        kind: 'captions',
+        id: captionStream,
+        label: captionStream
+      }, false).track;
+    }
+  }
+};
+
+/**
+ * Add caption text track data to a source handler given an array of captions
+ *
+ * @param {Object}
+ *   @param {Object} inbandTextTracks the inband text tracks
+ *   @param {Number} timestampOffset the timestamp offset of the source buffer
+ *   @param {Array} captionArray an array of caption data
+ * @private
+ */
+export const addCaptionData = function({
+  inbandTextTracks,
+  captionArray,
+  timestampOffset
+}) {
+  if (!captionArray) {
+    return;
+  }
+
+  const Cue = window.WebKitDataCue || window.VTTCue;
+
+  captionArray.forEach((caption) => {
+    const track = caption.stream;
+
+    inbandTextTracks[track].addCue(
+      new Cue(
+        caption.startTime + timestampOffset,
+        caption.endTime + timestampOffset,
+        caption.text
+      ));
+  });
+};
+
+/**
  * Define properties on a cue for backwards compatability,
  * but warn the user that the way that they are using it
  * is depricated and will be removed at a later date.
@@ -138,38 +200,6 @@ export const addMetadata = ({
 };
 
 /**
- * Add caption text track data to a source handler given an array of captions
- *
- * @param {Object}
- *   @param {Object} inbandTextTracks the inband text tracks
- *   @param {Number} timestampOffset the timestamp offset of the source buffer
- *   @param {Array} captionArray an array of caption data
- * @private
- */
-export const addCaptionData = ({
-  inbandTextTracks,
-  captionArray,
-  timestampOffset
-}) => {
-  if (!captionArray) {
-    return;
-  }
-
-  const Cue = window.WebKitDataCue || window.VTTCue;
-
-  captionArray.forEach((caption) => {
-    const track = caption.stream;
-
-    inbandTextTracks[track].addCue(
-      new Cue(
-        caption.startTime + timestampOffset,
-        caption.endTime + timestampOffset,
-        caption.text
-      ));
-  });
-};
-
-/**
  * Create metadata text track on video.js if it does not exist
  *
  * @param {Object} inbandTextTracks a reference to current inbandTextTracks
@@ -188,37 +218,6 @@ export const createMetadataTrackIfNotExists = (inbandTextTracks, dispatchType, t
   }, false).track;
 
   inbandTextTracks.metadataTrack_.inBandMetadataTrackDispatchType = dispatchType;
-};
-
-/**
- * Create captions text tracks on video.js if they do not exist
- *
- * @param {Object} inbandTextTracks a reference to current inbandTextTracks
- * @param {Object} tech the video.js tech
- * @param {Object} captionStream the caption stream to create
- * @private
- */
-export const createCaptionsTrackIfNotExists =
-(inbandTextTracks, tech, captionStream) => {
-  if (!inbandTextTracks[captionStream]) {
-    tech.trigger({type: 'usage', name: 'hls-608'});
-    let track = tech.textTracks().getTrackById(captionStream);
-
-    if (track) {
-      // Resuse an existing track with a CC# id because this was
-      // very likely created by videojs-contrib-hls from information
-      // in the m3u8 for us to use
-      inbandTextTracks[captionStream] = track;
-    } else {
-      // Otherwise, create a track with the default `CC#` label and
-      // without a language
-      inbandTextTracks[captionStream] = tech.addRemoteTextTrack({
-        kind: 'captions',
-        id: captionStream,
-        label: captionStream
-      }, false).track;
-    }
-  }
 };
 
 /**
