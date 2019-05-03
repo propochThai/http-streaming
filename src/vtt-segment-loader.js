@@ -446,8 +446,7 @@ export default class VTTSegmentLoader extends SegmentLoader {
     }
 
     const timestampmap = segmentInfo.timestampmap;
-    const diff =
-      (timestampmap.MPEGTS / ONE_SECOND_IN_TS) - timestampmap.LOCAL + mappingObj.mapping;
+    const diff = (timestampmap.MPEGTS / ONE_SECOND_IN_TS) - timestampmap.LOCAL + mappingObj.mapping;
 
     segmentInfo.cues.forEach((cue) => {
       // First convert cue time to TS time using the timestamp-map provided within the vtt
